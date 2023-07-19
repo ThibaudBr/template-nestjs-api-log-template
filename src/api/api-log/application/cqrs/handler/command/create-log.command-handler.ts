@@ -4,7 +4,10 @@ import { VerboseLogEnum } from '../../../../domain/enum/verbose-log.enum';
 import * as process from 'process';
 import { ApiTypeEnum } from '../../../../domain/enum/api-type.enum';
 import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { ClientProxy } from '@nestjs/microservices';
+import { Inject } from '@nestjs/common';
 
 @CommandHandler(CreateLogCommand)
 export class CreateLogCommandHandler implements ICommandHandler<CreateLogCommand> {
@@ -16,7 +19,11 @@ export class CreateLogCommandHandler implements ICommandHandler<CreateLogCommand
   private readonly API_LOG_TOKEN: string;
   private readonly IS_LOG_BY_HTTP: boolean;
 
-  constructor(private httpService: HttpService, private readonly configService: ConfigService) {
+  constructor(
+    @Inject('API_LOG') private client: ClientProxy,
+    private httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
     this.verbose = configService.get<VerboseLogEnum>('VERBOSE_LOG') ?? VerboseLogEnum.NONE;
     this.API_NAME = configService.get<string>('API_NAME') ?? 'NO-NAME';
     this.npm_package_version = process.env.npm_package_version ?? 'NO-VERSION';
@@ -43,6 +50,8 @@ export class CreateLogCommandHandler implements ICommandHandler<CreateLogCommand
       ).catch((): void => {
         return;
       });
+    } else {
+      this.client.emit('create-log', command);
     }
   }
 }
